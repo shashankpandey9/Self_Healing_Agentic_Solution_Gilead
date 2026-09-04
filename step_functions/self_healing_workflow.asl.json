@@ -1,0 +1,90 @@
+{
+  "Comment": "Self-healing workflow: recurrence lookup, classification, action, human-in-the-loop, memory update.",
+  "StartAt": "CheckKnownIncident",
+  "States": {
+    "CheckKnownIncident": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "self-healing-supervisor-agent",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.supervisor",
+      "Next": "IsKnownIncident"
+    },
+    "IsKnownIncident": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.supervisor.Payload.incident_exists",
+          "BooleanEquals": true,
+          "Next": "ExecuteRemediation"
+        }
+      ],
+      "Default": "ClassifyIncident"
+    },
+    "ClassifyIncident": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "self-healing-error-classifier-agent",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.classification",
+      "Next": "IsHighConfidence"
+    },
+    "IsHighConfidence": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.classification.Payload.confidence",
+          "NumericGreaterThanEquals": 0.8,
+          "Next": "ExecuteRemediation"
+        }
+      ],
+      "Default": "HumanInTheLoop"
+    },
+    "ExecuteRemediation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "self-healing-operator-agent",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.execution",
+      "Next": "UpdateIncidentMemory"
+    },
+    "HumanInTheLoop": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "self-healing-ticketing-agent",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.ticket",
+      "Next": "WaitForHumanResolution"
+    },
+    "WaitForHumanResolution": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {
+        "FunctionName": "self-healing-ticketing-agent",
+        "Payload": {
+          "taskToken.$": "$$.Task.Token",
+          "state.$": "$"
+        }
+      },
+      "ResultPath": "$.humanResolution",
+      "Next": "UpdateIncidentMemory"
+    },
+    "UpdateIncidentMemory": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "self-healing-incident-logger",
+        "Payload.$": "$"
+      },
+      "End": true
+    }
+  }
+}
