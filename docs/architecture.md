@@ -7,18 +7,26 @@ This solution merges two inputs:
   Retriever agents behind a Supervisor, using a central DynamoDB memory).
 
 **MCP is not used.** In the original multi-agent diagram, agents reached tools through an
-MCP client/server. In this implementation each agent instead owns a local `tools.py` module
-that calls AWS APIs (boto3), the ticketing system, or GitHub Actions directly.
+MCP client/server. In this implementation each agent instead will own a local `tools.py`
+module that calls AWS APIs (boto3), the ticketing system, or GitHub Actions directly.
+
+**Framework:** agents will be built with **LangGraph** (each agent as its own state graph
+for internal reasoning/retries) and exposed as independent services over the **A2A
+(Agent2Agent) protocol**, so the Supervisor and other agents call each other over a
+standard agent-to-agent interface instead of in-process imports.
+
+> This repository currently only contains the folder structure for the above — no
+> implementation code yet. See [FOLDER_STRUCTURE.md](../FOLDER_STRUCTURE.md).
 
 ## Components
 
 | Layer | AWS Service | Folder |
 |---|---|---|
 | Detection & observability | CloudWatch, DevOps Guru | `terraform/`, workload code |
-| Event routing | EventBridge | `infrastructure/eventbridge_rules.py` |
-| Concurrency control | SQS FIFO | `infrastructure/sqs_queue.py` |
-| Workflow orchestration | Step Functions | `step_functions/`, `infrastructure/step_functions_state_machine.py` |
-| Recurrence lookup / memory | DynamoDB | `infrastructure/dynamodb_tables.py`, `agents/common/aws/dynamodb_service.py` |
+| Event routing | EventBridge | `infrastructure/` |
+| Concurrency control | SQS FIFO | `infrastructure/` |
+| Workflow orchestration | Step Functions | `step_functions/`, `infrastructure/` |
+| Recurrence lookup / memory | DynamoDB | `infrastructure/`, `agents/common/` |
 | Reasoning / classification | Bedrock Agent + Knowledge Base | `agents/error_classifier_agent/`, `knowledge_base/` |
 | Action execution | Lambda, SSM, Terraform | `agents/operator_agent/`, `lambda_functions/`, `terraform/` |
 | Human-in-the-loop | SES | `agents/ticketing_agent/` |

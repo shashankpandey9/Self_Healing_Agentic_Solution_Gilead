@@ -1,17 +1,20 @@
 # Infrastructure
 
-boto3 provisioning scripts for the AWS resources the self-healing solution itself runs on
-(as opposed to `terraform/`, which the Operator Agent applies to remediate *workloads*).
+Placeholder for provisioning scripts for the AWS resources the self-healing solution
+itself runs on (as opposed to `terraform/`, which the Operator Agent will apply to
+remediate *workloads*).
 
-Each script is runnable standalone (`python -m infrastructure.<script>`) and idempotent.
+Expected resources once implemented:
 
-| Script | Resource |
+| Resource | Purpose |
 |---|---|
-| `dynamodb_tables.py` | Incident memory table |
-| `eventbridge_rules.py` | Rule that routes unresolved workload failures |
-| `sqs_queue.py` | FIFO queue that serializes incident processing |
-| `step_functions_state_machine.py` | Deploys `step_functions/self_healing_workflow.asl.json` |
-| `lambda_functions.py` | Packages/deploys the handlers under `lambda_functions/` |
-| `bedrock_knowledge_base.py` | Bedrock Knowledge Base backed by `knowledge_base/` in S3 |
-| `ses_setup.py` | Verified sender identity for human-in-the-loop alerts |
-| `iam_roles.py` | Execution roles for Lambda / Step Functions / Bedrock Agent |
+| DynamoDB table | Incident memory |
+| EventBridge rule | Routes unresolved workload failures |
+| SQS FIFO queue | Serializes incident processing |
+| Step Functions state machine | Runs the self-healing workflow |
+| Lambda functions | Deploys the handlers under `lambda_functions/` |
+| Bedrock Knowledge Base | Backed by `knowledge_base/` in S3 |
+| SES identity | Sender for human-in-the-loop alerts |
+| IAM roles | Execution roles for Lambda / Step Functions / Bedrock Agent |
+
+Deployment automation for these resources will be added later.

@@ -1,4 +1,3 @@
 # Step Functions
 
-Amazon States Language (ASL) definitions for the self-healing workflow. Deployed via
-`infrastructure/step_functions_state_machine.py`.
+Placeholder for the Amazon States Language (ASL) definition of the self-healing workflow.

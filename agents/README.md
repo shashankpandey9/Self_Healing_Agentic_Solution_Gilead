@@ -1,22 +1,19 @@
 # Agents
 
-Each folder is an independent agent with two files:
+Each subfolder is a placeholder for one agent in the multi-agent self-healing system.
+The team will implement these using **LangGraph** (per-agent state graph) and the
+**A2A (Agent2Agent) protocol** for agent-to-agent communication. **MCP is not used** —
+each agent will call its own capabilities directly instead of through an MCP client/server.
 
-- `agent.py` — reasoning/orchestration logic and the `invoke(state)` entry point.
-- `tools.py` — direct function-calling capabilities the agent uses (no MCP layer).
-
-Shared code lives in `agents/common/`:
-
-- `agent/base_agent.py` — `AgentBase` interface all agents implement.
-- `util/config_loader.py` — environment variable loading.
-- `model_provider/factory.py` — creates the LLM/Bedrock client used for reasoning.
-- `aws/aws_client.py` — central boto3 client factory.
-- `aws/dynamodb_service.py` — shared incident memory read/write.
-
-| Agent | Responsibility |
+| Folder | Responsibility |
 |---|---|
-| `supervisor_agent` | Routes incidents, checks for known signatures, tracks workflow state |
-| `log_retriever_agent` | Retrieves CloudWatch/S3 logs for the failing workload |
-| `error_classifier_agent` | Classifies root cause via the Bedrock Knowledge Base |
-| `operator_agent` | Executes the remediation plan and validates the outcome |
-| `ticketing_agent` | Files tickets and sends human-in-the-loop alerts |
+| `common/` | Shared code: base agent class, config loading, AWS/model clients, A2A client/server helpers |
+| `supervisor_agent/` | Routes incidents, checks for known signatures, tracks workflow state |
+| `log_retriever_agent/` | Retrieves CloudWatch/S3 logs for the failing workload |
+| `error_classifier_agent/` | Classifies root cause via the Bedrock Knowledge Base |
+| `operator_agent/` | Executes the remediation plan and validates the outcome |
+| `ticketing_agent/` | Files tickets and sends human-in-the-loop alerts |
+
+Expected convention once code is added (see the root [FOLDER_STRUCTURE.md](../FOLDER_STRUCTURE.md)):
+each agent folder holds `state.py` (LangGraph state), `agent.py` (the agent's state graph)
+and `tools.py` (direct function-calling capabilities, no MCP).
