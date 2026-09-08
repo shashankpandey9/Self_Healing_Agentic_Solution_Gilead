@@ -12,7 +12,7 @@ from core.agent.Agent import AgentBase
 from core.util.ConfigLoader import (load_env_variables,get_secret)
 from core.model_provider.factory import (ModelFactory)
 from a2a.types import AgentSkill
-from tools import (execute_resolution, validate_resolution,update_incident_memory)
+from tools import (execute_resolution, validate_resolution, route_resolution)
 
 @dataclass
 class OperatorState:
@@ -49,26 +49,28 @@ class OperatorAgent(AgentBase[OperatorState]):
             id="operator_agent",
             name="Operator Agent",
             description="Executes remediation plans",
-            tags=["operator"]
+            tags=["operator","self-healing","aws","databricks"]
         )
         self.initialize_graph()
         super().__init__(llm=self.llm, agent_skill=skill)
 
-    def execute_resolution_node(self,state):
+    def execute_resolution_node(self,state: OperatorState):
         plan = state.metadata["resolution_plan"]
         result = execute_resolution(plan)
         state.execution_result = result
+        state.metadata["execution_result"] = result
         return state
 
-    def validate_resolution_node(self,state):
-        result = validate_resolution(state.metadata)
+    def validate_resolution_node(self,state: OperatorState):
+        plan= state.metadata["resolution_plan"]
+        result = validate_resolution(plan)
         state.validation_result = result
+        state.metadata["execution_result"] = result
         return state
 
-    def resolution_router(self,state):
-        if state.validation_result:
-            return "resolved"
-        return "failed"
+    def resolution_router(self,state: OperatorState):
+        result = route_resolution(state.validation_result)
+        return result.lower()
 
     #memory node
     def update_memory_node(self,state):
@@ -85,7 +87,11 @@ class OperatorAgent(AgentBase[OperatorState]):
             }
         )
         return state
-
+    
+    def success_node(self, state: OperatorState):    
+            state.metadata["final_status"] = "SUCCESS"    
+            return state
+    
     def failure_node(self,state):
         state.metadata["final_status"] = "FAILED"
         return state
@@ -115,6 +121,10 @@ class OperatorAgent(AgentBase[OperatorState]):
             self.update_memory_node
         )
         builder.add_node(
+             "success",
+              self.success_node
+        )
+        builder.add_node(
             "failure",
             self.failure_node
         )
@@ -129,15 +139,14 @@ class OperatorAgent(AgentBase[OperatorState]):
             "validate_resolution",
             self.resolution_router,
             {
-                "resolved":
-                    "update_memory",
-
-                "failed":
-                    "failure"
+                "resolved":"update_memory",
+                "success": "success",
+                "failed": "failure"
             }
         )
         builder.add_edge(
             "update_memory",
+             "success",
             END
         )
         builder.add_edge(
